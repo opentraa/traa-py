@@ -1,0 +1,22 @@
+include LICENSE
+include README.md
+include pyproject.toml
+include setup.py
+
+# Include precompiled library files for all platforms
+recursive-include libs/windows *.dll
+recursive-include libs/linux *.so
+recursive-include libs/darwin *.dylib
+
+# Include platform-specific directories
+graft libs/windows
+graft libs/linux
+graft libs/darwin
+
+# Exclude build files and system files
+global-exclude *.py[cod]
+global-exclude __pycache__
+global-exclude .DS_Store
+global-exclude *.o
+global-exclude *.so.debug
+global-exclude *.dll.debug
