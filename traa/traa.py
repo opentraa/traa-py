@@ -57,6 +57,20 @@ class Error(Exception):
         }
         
         return error_messages.get(code, f"Unknown error code: {code}")
+    
+    def __str__(self) -> str:
+        return f"TRAA Error {self.code}: {self.message}"
+    
+    def __repr__(self) -> str:
+        return f"Error({self.code}, '{self.message}')"
+    
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Error):
+            return NotImplemented
+        return self.code == other.code and self.message == other.message
+    
+    def __hash__(self) -> int:
+        return hash((self.code, self.message))
 
 # Decorator to check error codes
 def check_error(func):
@@ -72,6 +86,8 @@ def check_error(func):
 class Size:
     """Class representing width and height"""
     def __init__(self, width: int, height: int):
+        if width < 0 or height < 0:
+            raise ValueError("Width and height must be non-negative")
         self.width = width
         self.height = height
     
@@ -92,11 +108,23 @@ class Size:
     
     def __repr__(self) -> str:
         return f"Size({self.width}, {self.height})"
+    
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Size):
+            return NotImplemented
+        return self.width == other.width and self.height == other.height
+    
+    def __hash__(self) -> int:
+        return hash((self.width, self.height))
 
 # Rect class
 class Rect:
     """Class representing a rectangle with left, top, right, bottom coordinates"""
     def __init__(self, left: int, top: int, right: int, bottom: int):
+        if right < left:
+            raise ValueError("right must be greater than or equal to left")
+        if bottom < top:
+            raise ValueError("bottom must be greater than or equal to top")
         self.left = left
         self.top = top
         self.right = right
@@ -126,11 +154,45 @@ class Rect:
         """Get height of rectangle"""
         return self.bottom - self.top
     
+    @property
+    def x(self) -> int:
+        """Get x coordinate (left)"""
+        return self.left
+    
+    @property
+    def y(self) -> int:
+        """Get y coordinate (top)"""
+        return self.top
+    
+    @property
+    def center_x(self) -> int:
+        """Get center x coordinate"""
+        return (self.left + self.right) // 2
+    
+    @property
+    def center_y(self) -> int:
+        """Get center y coordinate"""
+        return (self.top + self.bottom) // 2
+    
+    @property
+    def area(self) -> int:
+        """Get area of rectangle"""
+        return self.width * self.height
+    
     def __str__(self) -> str:
         return f"({self.left}, {self.top}, {self.right}, {self.bottom})"
     
     def __repr__(self) -> str:
         return f"Rect({self.left}, {self.top}, {self.right}, {self.bottom})"
+    
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Rect):
+            return NotImplemented
+        return (self.left == other.left and self.top == other.top and
+                self.right == other.right and self.bottom == other.bottom)
+    
+    def __hash__(self) -> int:
+        return hash((self.left, self.top, self.right, self.bottom))
 
 # ScreenSourceInfo class
 class ScreenSourceInfo:
@@ -212,31 +274,69 @@ class _TRAA:
     @classmethod
     @check_error
     def enum_screen_sources(cls, icon_size: Size = None, thumbnail_size: Size = None, external_flags: Union[int, ScreenSourceFlags] = ScreenSourceFlags.NONE) -> List[ScreenSourceInfo]:
-        """
-        Enumerate available screen sources (displays and windows)
-        
+        """Enumerate and retrieve information about available screen sources.
+
+        This function discovers all available screen sources (displays and windows) in the system
+        and returns detailed information about each source. Optionally, it can also capture
+        icons and thumbnails for the sources.
+
+        The function provides extensive filtering capabilities through flags to control which
+        types of sources are included in the results.
+
         Args:
-            icon_size: Size for icons, None for no icons
-            thumbnail_size: Size for thumbnails, None for no thumbnails
-            external_flags: Flags to control enumeration behavior. Can be combination of ScreenSourceFlags:
-                ScreenSourceFlags.NONE - Default behavior
-                ScreenSourceFlags.IGNORE_SCREEN - Ignore display screens
-                ScreenSourceFlags.IGNORE_WINDOW - Ignore windows
-                ScreenSourceFlags.IGNORE_MINIMIZED - Ignore minimized windows
-                ScreenSourceFlags.NOT_IGNORE_UNTITLED - Include untitled windows
-                ScreenSourceFlags.NOT_IGNORE_UNRESPONSIVE - Include unresponsive windows
-                ScreenSourceFlags.IGNORE_CURRENT_PROCESS_WINDOWS - Ignore windows from current process
-                ScreenSourceFlags.NOT_IGNORE_TOOLWINDOW - Include tool windows
-                ScreenSourceFlags.IGNORE_NOPROCESS_PATH - Ignore windows without process path
-                ScreenSourceFlags.NOT_SKIP_SYSTEM_WINDOWS - Include system windows
-                ScreenSourceFlags.NOT_SKIP_ZERO_LAYER_WINDOWS - Include zero layer windows
-                ScreenSourceFlags.ALL - All flags enabled
-                
-                Flags can be combined using bitwise OR operator (|)
-                Example: ScreenSourceFlags.IGNORE_SCREEN | ScreenSourceFlags.IGNORE_MINIMIZED
-            
+            icon_size (Size, optional): The desired size for source icons.
+                                      If None or Size(0, 0), no icons will be captured.
+                                      Icons are typically used for window application icons.
+            thumbnail_size (Size, optional): The desired size for source thumbnails.
+                                          If None or Size(0, 0), no thumbnails will be captured.
+                                          Thumbnails are live previews of the source content.
+            external_flags (Union[int, ScreenSourceFlags], optional): Flags to control which sources
+                                                                    are included in the enumeration.
+                                                                    Defaults to ScreenSourceFlags.NONE.
+                                                                    Available flags:
+                - NONE: Default behavior, include all normal sources
+                - IGNORE_SCREEN: Skip display screens
+                - IGNORE_WINDOW: Skip windows
+                - IGNORE_MINIMIZED: Skip minimized windows
+                - NOT_IGNORE_UNTITLED: Include windows without titles
+                - NOT_IGNORE_UNRESPONSIVE: Include unresponsive windows
+                - IGNORE_CURRENT_PROCESS_WINDOWS: Skip windows from this process
+                - NOT_IGNORE_TOOLWINDOW: Include tool windows
+                - IGNORE_NOPROCESS_PATH: Skip windows without process paths
+                - NOT_SKIP_SYSTEM_WINDOWS: Include system windows
+                - NOT_SKIP_ZERO_LAYER_WINDOWS: Include zero layer windows
+                - ALL: Enable all flags
+
         Returns:
-            List[ScreenSourceInfo]: List of available screen sources
+            List[ScreenSourceInfo]: A list of ScreenSourceInfo objects, each containing:
+                - id: Unique identifier for the source
+                - screen_id: Display identifier (for screens)
+                - is_window: Whether this is a window (True) or display (False)
+                - is_minimized: Window minimization state
+                - is_maximized: Window maximization state
+                - is_primary: Whether this is the primary display
+                - rect: Source dimensions and position
+                - title: Window title or display name
+                - process_path: Path to the window's process executable
+                - icon_data: Icon image data if requested (numpy array)
+                - thumbnail_data: Thumbnail image data if requested (numpy array)
+
+        Raises:
+            Error: If enumeration fails. Error codes:
+                  - 21: Enumerate screen source info failed
+                  - Others: See Error class documentation
+
+        Example:
+            >>> # Get all windows with thumbnails, excluding minimized ones
+            >>> sources = traa.enum_screen_sources(
+            ...     thumbnail_size=Size(160, 120),
+            ...     external_flags=ScreenSourceFlags.IGNORE_SCREEN | 
+            ...                   ScreenSourceFlags.IGNORE_MINIMIZED
+            ... )
+            >>> for source in sources:
+            ...     print(f"Found window: {source.title}")
+            ...     if source.thumbnail_data is not None:
+            ...         print(f"Thumbnail size: {source.thumbnail_size}")
         """
         # Create default sizes if not provided
         if icon_size is None:
@@ -280,16 +380,48 @@ class _TRAA:
     @classmethod
     @check_error
     def create_snapshot(cls, source_id: int, snapshot_size: Size) -> Tuple[np.ndarray, Size]:
-        """
-        Create snapshot
-        
+        """Capture a snapshot of the specified screen source with the requested size.
+
+        This function captures the content of a screen source (display or window) and
+        returns the image data along with its actual dimensions. The image will be
+        scaled to match the requested size while preserving the aspect ratio.
+
         Args:
-            source_id: Source ID
-            snapshot_size: Requested snapshot size
-            
+            source_id (int): The unique identifier of the screen source to capture.
+                           Must be a valid source ID obtained from enum_screen_sources().
+            snapshot_size (Size): The desired dimensions for the snapshot.
+                                Both width and height must be positive integers.
+                                The actual output may have different dimensions to
+                                preserve the aspect ratio.
+
         Returns:
-            Tuple[np.ndarray, Size]: Snapshot data and actual size
+            Tuple[np.ndarray, Size]: A tuple containing:
+                - np.ndarray: The image data as a numpy array with shape (height, width, channels).
+                  The number of channels can be:
+                  - 3 for RGB format
+                  - 4 for RGBA format
+                  - 1 for grayscale (shape will be just height, width)
+                - Size: The actual dimensions of the captured image, which may differ
+                  from the requested size to preserve the aspect ratio.
+
+        Raises:
+            ValueError: If snapshot_size has zero or negative width or height.
+            Error: If source_id is invalid or other error occurs during capture.
+                  Error codes:
+                  - 22: Invalid source ID
+                  - Others: See Error class documentation
+
+        Example:
+            >>> sources = traa.enum_screen_sources()
+            >>> if sources:
+            ...     # Capture the first source at 1080p
+            ...     image, actual_size = traa.create_snapshot(sources[0].id, Size(1920, 1080))
+            ...     print(f"Captured image size: {actual_size}")
         """
+        # Validate size
+        if snapshot_size.width <= 0 or snapshot_size.height <= 0:
+            raise ValueError("Snapshot size must be greater than zero")
+
         # Create C structure
         c_size = snapshot_size.to_c_size()
         c_actual_size = ffi.new("traa_size*")

@@ -22,7 +22,7 @@ create_snapshot = _traa.create_snapshot
 enum_screen_sources = _traa.enum_screen_sources
 
 # Version information
-__version__ = "0.1.0"  # Update with actual version
+__version__ = "0.1.4"  # Update with actual version
 
 # Export all public symbols
 __all__ = [
@@ -33,4 +33,5 @@ __all__ = [
     "ScreenSourceInfo",
     "create_snapshot",
     "enum_screen_sources",
+    "__version__"
 ]

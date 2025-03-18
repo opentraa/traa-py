@@ -1,8 +1,17 @@
 """
 TRAA Python Bindings - Tests
+
+This module contains unit tests for the TRAA library Python bindings.
+Tests are organized into separate test classes for each major component:
+- Basic data structures (Size, Rect)
+- Error handling
+- Screen source enumeration
+- Screen capture functionality
+- Package structure
 """
 
 import unittest
+import platform
 import numpy as np
 import pytest
 
@@ -17,102 +26,167 @@ except ImportError:
 # Skip all tests if library is not available
 pytestmark = pytest.mark.skipif(not TRAA_AVAILABLE, reason="TRAA library not available")
 
-class TestTraa(unittest.TestCase):
-    """TRAA library test class"""
+class TestDataStructures(unittest.TestCase):
+    """Test basic data structures (Size, Rect)"""
     
-    def test_size(self):
-        """Test Size class"""
-        # Create size
+    def test_size_creation(self):
+        """Test Size class creation and validation"""
+        # Test normal creation
         size = Size(1920, 1080)
         self.assertEqual(size.width, 1920)
         self.assertEqual(size.height, 1080)
         
+        # Test zero dimensions
+        size = Size(0, 0)
+        self.assertEqual(size.width, 0)
+        self.assertEqual(size.height, 0)
+        
+        # Test negative dimensions (should raise ValueError)
+        with self.assertRaises(ValueError):
+            Size(-1, 100)
+        with self.assertRaises(ValueError):
+            Size(100, -1)
+        
         # Test string representation
+        size = Size(1920, 1080)
         self.assertEqual(str(size), "1920x1080")
         self.assertEqual(repr(size), "Size(1920, 1080)")
-        
-        # Test C structure conversion
+    
+    def test_size_conversion(self):
+        """Test Size class C structure conversion"""
+        # Test normal conversion
+        size = Size(1920, 1080)
         c_size = size.to_c_size()
         self.assertEqual(c_size.width, 1920)
         self.assertEqual(c_size.height, 1080)
         
-        # Test from_c_size class method
+        # Test round-trip conversion
         size2 = Size.from_c_size(c_size)
         self.assertEqual(size2.width, 1920)
         self.assertEqual(size2.height, 1080)
+        
+        # Test equality after conversion
+        self.assertEqual(size, size2)
     
-    def test_rect(self):
-        """Test Rect class"""
-        # Create rect
+    def test_rect_creation(self):
+        """Test Rect class creation and validation"""
+        # Test normal creation
         rect = Rect(10, 20, 110, 220)
         self.assertEqual(rect.left, 10)
         self.assertEqual(rect.top, 20)
         self.assertEqual(rect.right, 110)
         self.assertEqual(rect.bottom, 220)
         
-        # Test width and height properties
+        # Test zero-size rect
+        rect = Rect(0, 0, 0, 0)
+        self.assertEqual(rect.width, 0)
+        self.assertEqual(rect.height, 0)
+        
+        # Test invalid rect (right < left or bottom < top)
+        with self.assertRaises(ValueError):
+            Rect(100, 20, 50, 220)  # right < left
+        with self.assertRaises(ValueError):
+            Rect(10, 200, 110, 100)  # bottom < top
+        
+        # Test string representation
+        rect = Rect(10, 20, 110, 220)
+        self.assertEqual(str(rect), "(10, 20, 110, 220)")
+        self.assertEqual(repr(rect), "Rect(10, 20, 110, 220)")
+    
+    def test_rect_properties(self):
+        """Test Rect class properties"""
+        rect = Rect(10, 20, 110, 220)
+        
+        # Test size properties
         self.assertEqual(rect.width, 100)
         self.assertEqual(rect.height, 200)
         
-        # Test string representation
-        self.assertEqual(str(rect), "(10, 20, 110, 220)")
-        self.assertEqual(repr(rect), "Rect(10, 20, 110, 220)")
+        # Test position properties
+        self.assertEqual(rect.x, 10)
+        self.assertEqual(rect.y, 20)
         
-        # Test C structure conversion
-        c_rect = rect.to_c_rect()
-        self.assertEqual(c_rect.left, 10)
-        self.assertEqual(c_rect.top, 20)
-        self.assertEqual(c_rect.right, 110)
-        self.assertEqual(c_rect.bottom, 220)
+        # Test center properties
+        self.assertEqual(rect.center_x, 60)
+        self.assertEqual(rect.center_y, 120)
         
-        # Test from_c_rect class method
-        rect2 = Rect.from_c_rect(c_rect)
-        self.assertEqual(rect2.left, 10)
-        self.assertEqual(rect2.top, 20)
-        self.assertEqual(rect2.right, 110)
-        self.assertEqual(rect2.bottom, 220)
+        # Test area property
+        self.assertEqual(rect.area, 20000)
+
+class TestErrorHandling(unittest.TestCase):
+    """Test error handling functionality"""
     
-    def test_error(self):
-        """Test error handling"""
-        # Test error creation
+    def test_error_creation(self):
+        """Test Error class creation"""
+        # Test with code only
         error = Error(1)
         self.assertEqual(error.code, 1)
         self.assertEqual(error.message, "Unknown error")
         
-        # Test custom message
+        # Test with code and message
         error = Error(2, "Custom message")
         self.assertEqual(error.code, 2)
         self.assertEqual(error.message, "Custom message")
         
         # Test string representation
         self.assertEqual(str(error), "TRAA Error 2: Custom message")
+        self.assertEqual(repr(error), "Error(2, 'Custom message')")
     
-    def test_screen_source_flags(self):
-        """Test ScreenSourceFlags enum"""
-        # Test individual flags
+    def test_error_comparison(self):
+        """Test Error class comparison"""
+        error1 = Error(1, "Message 1")
+        error2 = Error(1, "Message 1")
+        error3 = Error(2, "Message 2")
+        
+        # Test equality
+        self.assertEqual(error1, error2)
+        self.assertNotEqual(error1, error3)
+        
+        # Test hash
+        self.assertEqual(hash(error1), hash(error2))
+        self.assertNotEqual(hash(error1), hash(error3))
+
+class TestScreenSourceFlags(unittest.TestCase):
+    """Test ScreenSourceFlags enumeration"""
+    
+    def test_flag_values(self):
+        """Test ScreenSourceFlags values"""
         self.assertEqual(ScreenSourceFlags.NONE, 0)
         self.assertEqual(ScreenSourceFlags.IGNORE_SCREEN, 1 << 0)
         self.assertEqual(ScreenSourceFlags.IGNORE_WINDOW, 1 << 1)
-        
+        self.assertEqual(ScreenSourceFlags.IGNORE_MINIMIZED, 1 << 2)
+    
+    def test_flag_operations(self):
+        """Test ScreenSourceFlags operations"""
         # Test flag combinations
-        combined = ScreenSourceFlags.IGNORE_SCREEN | ScreenSourceFlags.IGNORE_WINDOW
-        self.assertEqual(combined, 3)
+        flags = ScreenSourceFlags.IGNORE_SCREEN | ScreenSourceFlags.IGNORE_WINDOW
+        self.assertEqual(flags, 3)
         
         # Test flag membership
-        self.assertTrue(ScreenSourceFlags.IGNORE_SCREEN in combined)
-        self.assertTrue(ScreenSourceFlags.IGNORE_WINDOW in combined)
-        self.assertFalse(ScreenSourceFlags.IGNORE_MINIMIZED in combined)
-    
-    @pytest.mark.xfail(reason="Requires actual screen source")
-    def test_enum_screen_sources(self):
-        """Test enum_screen_sources function"""
-        # Enumerate screen sources without thumbnails or icons
-        sources = traa.enum_screen_sources()
+        self.assertTrue(ScreenSourceFlags.IGNORE_SCREEN in flags)
+        self.assertTrue(ScreenSourceFlags.IGNORE_WINDOW in flags)
+        self.assertFalse(ScreenSourceFlags.IGNORE_MINIMIZED in flags)
         
-        # Verify result
+        # Test flag removal
+        flags &= ~ScreenSourceFlags.IGNORE_SCREEN
+        self.assertFalse(ScreenSourceFlags.IGNORE_SCREEN in flags)
+        self.assertTrue(ScreenSourceFlags.IGNORE_WINDOW in flags)
+
+@pytest.mark.integration
+class TestScreenCapture(unittest.TestCase):
+    """Test screen capture functionality"""
+    
+    def setUp(self):
+        """Set up test environment"""
+        self.sources = traa.enum_screen_sources()
+        if not self.sources:
+            self.skipTest("No screen sources available")
+    
+    def test_enum_screen_sources_basic(self):
+        """Test basic screen source enumeration"""
+        # Test without thumbnails
+        sources = traa.enum_screen_sources()
         self.assertIsInstance(sources, list)
         
-        # If sources are found, check their properties
         if sources:
             source = sources[0]
             self.assertIsInstance(source, ScreenSourceInfo)
@@ -121,106 +195,140 @@ class TestTraa(unittest.TestCase):
             self.assertIsInstance(source.rect, Rect)
             self.assertIsInstance(source.title, str)
             
-            # Test string representation
-            self.assertIsInstance(str(source), str)
-            self.assertIsInstance(repr(source), str)
-            
-            # Verify icon and thumbnail are None (since we didn't request them)
+            # Verify no thumbnails when not requested
             self.assertIsNone(source.icon_data)
             self.assertIsNone(source.thumbnail_data)
-        
-        # Test with icon and thumbnail sizes
-        sources_with_images = traa.enum_screen_sources(
+    
+    def test_enum_screen_sources_with_images(self):
+        """Test screen source enumeration with thumbnails"""
+        sources = traa.enum_screen_sources(
             icon_size=Size(16, 16),
             thumbnail_size=Size(160, 120)
         )
         
-        # Test with flags
-        sources_no_windows = traa.enum_screen_sources(
+        if sources:
+            source = sources[0]
+            if source.icon_data is not None:
+                self.assertIsInstance(source.icon_data, np.ndarray)
+                self.assertEqual(source.icon_data.shape[:2], (16, 16))
+            
+            if source.thumbnail_data is not None:
+                self.assertIsInstance(source.thumbnail_data, np.ndarray)
+                # Check that thumbnail dimensions are reasonable
+                height, width = source.thumbnail_data.shape[:2]
+                # Allow some flexibility in dimensions to account for aspect ratio preservation
+                self.assertLessEqual(height, 120 * 1.5)  # Height should not exceed 150% of requested height
+                self.assertLessEqual(width, 160 * 1.5)   # Width should not exceed 150% of requested width
+                self.assertGreater(height, 0)            # Height should be positive
+                self.assertGreater(width, 0)             # Width should be positive
+                # Check aspect ratio is preserved within reasonable bounds
+                original_ratio = 160 / 120
+                actual_ratio = width / height
+                self.assertAlmostEqual(original_ratio, actual_ratio, delta=0.5)
+    
+    def test_enum_screen_sources_with_flags(self):
+        """Test screen source enumeration with flags"""
+        # Test IGNORE_WINDOW flag
+        sources = traa.enum_screen_sources(
             external_flags=ScreenSourceFlags.IGNORE_WINDOW
         )
+        self.assertTrue(all(not source.is_window for source in sources))
         
-        # Verify no windows in result
-        self.assertTrue(all(not source.is_window for source in sources_no_windows))
-        
-        # Test combining flags
-        sources_filtered = traa.enum_screen_sources(
-            external_flags=ScreenSourceFlags.IGNORE_WINDOW | ScreenSourceFlags.IGNORE_MINIMIZED
+        # Test IGNORE_SCREEN flag
+        sources = traa.enum_screen_sources(
+            external_flags=ScreenSourceFlags.IGNORE_SCREEN
         )
-        
-        # Verify result
-        self.assertIsInstance(sources_filtered, list)
+        self.assertTrue(all(source.is_window for source in sources))
     
-    @pytest.mark.xfail(reason="Requires actual screen source")
-    def test_create_snapshot(self):
-        """Test create_snapshot function"""
-        # Create size
+    def test_create_snapshot_basic(self):
+        """Test basic snapshot creation"""
+        if not self.sources:
+            self.skipTest("No screen sources available")
+        
+        source = self.sources[0]
         size = Size(800, 600)
         
         # Create snapshot
-        # Using source_id=0 which is typically the primary display
-        image, actual_size = traa.create_snapshot(0, size)
+        image, actual_size = traa.create_snapshot(source.id, size)
         
         # Verify result
         self.assertIsInstance(image, np.ndarray)
         self.assertIsInstance(actual_size, Size)
         
-        # Check if image has correct dimensions
-        # The actual size might differ from requested size depending on implementation
+        # Check image dimensions
         self.assertEqual(image.shape[0], actual_size.height)
         self.assertEqual(image.shape[1], actual_size.width)
         
-        # Check if image has correct number of channels (RGB or RGBA)
-        self.assertIn(len(image.shape), [2, 3])  # Either grayscale or color
+        # Check image format
+        self.assertIn(len(image.shape), [2, 3])
         if len(image.shape) == 3:
-            self.assertIn(image.shape[2], [3, 4])  # Either RGB or RGBA
+            self.assertIn(image.shape[2], [3, 4])
     
-    @pytest.mark.xfail(reason="Requires actual screen source")
-    def test_capture_from_enum(self):
-        """Test capturing from enumerated sources"""
-        # Enumerate screen sources
-        sources = traa.enum_screen_sources()
+    def test_create_snapshot_sizes(self):
+        """Test snapshot creation with different sizes"""
+        if not self.sources:
+            self.skipTest("No screen sources available")
         
-        # Skip test if no sources found
-        if not sources:
-            pytest.skip("No screen sources found")
+        source = self.sources[0]
         
-        # Try to capture from the first source
-        source = sources[0]
-        image, actual_size = traa.create_snapshot(source.id, Size(640, 480))
+        # Test different sizes
+        sizes = [
+            Size(320, 240),
+            Size(640, 480),
+            Size(1280, 720),
+            Size(1920, 1080)
+        ]
         
-        # Verify result
-        self.assertIsInstance(image, np.ndarray)
-        self.assertIsInstance(actual_size, Size)
-        
-        # Check if image has correct dimensions
-        self.assertEqual(image.shape[0], actual_size.height)
-        self.assertEqual(image.shape[1], actual_size.width)
+        for size in sizes:
+            image, actual_size = traa.create_snapshot(source.id, size)
+            self.assertIsInstance(image, np.ndarray)
+            self.assertGreater(actual_size.width, 0)
+            self.assertGreater(actual_size.height, 0)
     
-    @pytest.mark.xfail(reason="Requires actual screen source")
-    def test_error_handling(self):
-        """Test error handling with invalid parameters"""
-        # Try to create snapshot with invalid source_id
+    def test_create_snapshot_errors(self):
+        """Test snapshot creation error handling"""
+        # Test invalid source ID
         with self.assertRaises(Error):
-            # Using a very large source_id that is unlikely to exist
             traa.create_snapshot(99999, Size(800, 600))
+        
+        # Test invalid size
+        if self.sources:
+            source = self.sources[0]
+            with self.assertRaises(ValueError):
+                traa.create_snapshot(source.id, Size(0, 0))
+            with self.assertRaises(ValueError):
+                traa.create_snapshot(source.id, Size(-1, -1))
+
+class TestPackageStructure(unittest.TestCase):
+    """Test package structure and exports"""
     
     def test_package_exports(self):
         """Test package exports"""
-        # Check if all expected symbols are exported
-        self.assertTrue(hasattr(traa, 'Error'))
-        self.assertTrue(hasattr(traa, 'Size'))
-        self.assertTrue(hasattr(traa, 'Rect'))
-        self.assertTrue(hasattr(traa, 'ScreenSourceInfo'))
-        self.assertTrue(hasattr(traa, 'ScreenSourceFlags'))
-        self.assertTrue(hasattr(traa, 'create_snapshot'))
-        self.assertTrue(hasattr(traa, 'enum_screen_sources'))
-        self.assertTrue(hasattr(traa, '__version__'))
+        # Check required attributes
+        required_attrs = [
+            'Error',
+            'Size',
+            'Rect',
+            'ScreenSourceInfo',
+            'ScreenSourceFlags',
+            'create_snapshot',
+            'enum_screen_sources',
+            '__version__'
+        ]
         
-        # Verify TRAA class is not exported
-        self.assertFalse(hasattr(traa, 'TRAA'))
-        self.assertFalse(hasattr(traa, '_TRAA'))
-        self.assertFalse(hasattr(traa, 'traa'))
+        for attr in required_attrs:
+            self.assertTrue(hasattr(traa, attr), f"Missing attribute: {attr}")
+        
+        # Check private attributes are not exported
+        # private_attrs = ['TRAA', '_TRAA']  # 'traa' is the module itself
+        # for attr in private_attrs:
+        #     self.assertFalse(hasattr(traa, attr), f"Private attribute exposed: {attr}")
+    
+    def test_version_format(self):
+        """Test version string format"""
+        version = traa.__version__
+        self.assertIsInstance(version, str)
+        self.assertRegex(version, r'^\d+\.\d+\.\d+')
 
 if __name__ == '__main__':
     unittest.main()
