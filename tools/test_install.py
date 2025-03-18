@@ -11,7 +11,6 @@ This script verifies the installation of the TRAA library by:
 import os
 import sys
 import platform
-import subprocess
 from pathlib import Path
 
 def print_section(title):
@@ -45,28 +44,43 @@ def check_library_files():
         
         # Check platform-specific libraries
         system = platform.system().lower()
+        machine = platform.machine().lower()
+
         if system == 'darwin':
-            # Check for Linux shared library
-            so_path = os.path.join(libs_path, 'libtraa.dylib')
-            if not os.path.exists(so_path):
-                print(f"✗ Shared library not found at: {so_path}")
+            # Check for macOS dynamic library
+            lib_path = os.path.join(libs_path, 'darwin', 'libtraa.dylib')
+            if not os.path.exists(lib_path):
+                print(f"✗ Dynamic library not found at: {lib_path}")
                 return False
-            print(f"✓ Found shared library at: {so_path}")
+            print(f"✓ Found dynamic library at: {lib_path}")
             
         elif system == 'windows':
-            # Check for Windows DLL
-            machine = platform.machine().lower()
-            arch = 'x64' if machine in ('amd64', 'x86_64') else 'x86'
-            dll_path = os.path.join(libs_path, 'traa.dll')
-            
+            # Check for Windows DLL based on architecture
+            if machine in ['amd64', 'x86_64', 'arm64']:
+                arch_path = 'x64'
+            elif machine == 'x86':
+                arch_path = 'x86'
+            else:
+                print(f"✗ Unsupported Windows architecture: {machine}")
+                return False
+                
+            dll_path = os.path.join(libs_path, 'windows', arch_path, 'traa.dll')
             if not os.path.exists(dll_path):
                 print(f"✗ DLL not found at: {dll_path}")
                 return False
             print(f"✓ Found DLL at: {dll_path}")
             
         elif system == 'linux':
-            # Check for Linux shared library
-            so_path = os.path.join(libs_path, 'libtraa.so')
+            # Check for Linux shared library based on architecture
+            if machine in ['x86_64', 'amd64']:
+                arch_path = 'x64'
+            elif machine in ['aarch64', 'arm64']:
+                arch_path = 'arm64'
+            else:
+                print(f"✗ Unsupported Linux architecture: {machine}")
+                return False
+                
+            so_path = os.path.join(libs_path, 'linux', arch_path, 'libtraa.so')
             if not os.path.exists(so_path):
                 print(f"✗ Shared library not found at: {so_path}")
                 return False

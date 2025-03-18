@@ -50,22 +50,36 @@ void traa_free_snapshot(uint8_t *data);
         # Get current module directory
         base_path = Path(__file__).parent.absolute()
         
-        # Select correct library file name based on platform
+        # Select correct library file name and path based on platform
         system = platform.system().lower()
+        machine = platform.machine().lower()
+        
         if system == 'windows':
             lib_name = 'traa.dll'
+            if machine in ['amd64', 'x86_64', 'arm64']:
+                lib_path = base_path / "libs" / "windows" / "x64" / lib_name
+            elif machine == 'x86':
+                lib_path = base_path / "libs" / "windows" / "x86" / lib_name
+            else:
+                raise RuntimeError(f"Unsupported Windows architecture: {machine}")
         elif system == 'darwin':  # macOS
             lib_name = 'libtraa.dylib'
+            lib_path = base_path / "libs" / "darwin" / lib_name
         elif system == 'linux':
             lib_name = 'libtraa.so'
+            if machine in ['x86_64', 'amd64']:
+                lib_path = base_path / "libs" / "linux" / "x64" / lib_name
+            elif machine in ['aarch64', 'arm64']:
+                lib_path = base_path / "libs" / "linux" / "arm64" / lib_name
+            else:
+                raise RuntimeError(f"Unsupported Linux architecture: {machine}")
         else:
             raise RuntimeError(f"Unsupported platform: {system}")
         
-        file_path = base_path / "libs" / lib_name
-        if file_path.exists():
-            return str(file_path)
+        if lib_path.exists():
+            return str(lib_path)
         
-        raise FileNotFoundError(f"Could not find {lib_name} library in {file_path}")
+        raise FileNotFoundError(f"Could not find {lib_name} library in {lib_path}")
     
     # Load library
     _lib = ffi.dlopen(get_lib_path())

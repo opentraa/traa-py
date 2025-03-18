@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "traa"
-version = "0.1.0"
+version = "0.1.4"
 description = "A Python library for capturing and interacting with the desktop screen"
 readme = "README.md"
 keywords = [
     "Screen Capturer", "Snapshot", "Desktop Capturer"
 ]
-license = { text = "BSD 3-Clause License"}
+license = { file = "LICENSE" }
 authors = [
   { name = "Sylar", email = "peilinok@gmail.com" },
 ]
@@ -24,14 +24,3 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/opentraa/traa-py"
 Issues = "https://github.com/opentraa/traa-py/issues"
-
-[tool.mypy]
-python_version = "3.9"
-pretty = true
-disallow_any_generics = true
-enable_error_code = "ignore-without-code"
-extra_checks = true
-follow_imports = "silent"
-warn_redundant_casts = true
-warn_unreachable = true
-warn_unused_ignores = true

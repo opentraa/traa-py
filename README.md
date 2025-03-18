@@ -209,7 +209,3 @@ See the `examples` directory for more detailed examples:
 - Python 3.7+
 - Pillow (PIL) for image handling
 - NumPy for array operations
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
