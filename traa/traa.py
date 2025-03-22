@@ -4,12 +4,8 @@ TRAA Python API
 This module provides a Python friendly interface to the TRAA C library.
 """
 
-import os
-import sys
-import platform
 import threading
-import atexit
-from typing import List, Tuple, Callable, Optional, Union, Dict, Any
+from typing import List, Tuple, Union
 import numpy as np
 from enum import IntFlag
 

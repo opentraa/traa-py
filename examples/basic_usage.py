@@ -23,6 +23,12 @@ from traa import (
     enum_screen_sources,
 )
 
+def ensure_tmp_dir():
+    """Create tmp directory if it doesn't exist"""
+    tmp_dir = os.path.join(os.path.dirname(__file__), 'tmp')
+    os.makedirs(tmp_dir, exist_ok=True)
+    return tmp_dir
+
 def main():
     """Main function"""
     try:
@@ -72,7 +78,8 @@ def main():
             mode = "L"  # Grayscale
         
         # Save snapshot
-        output_path = "snapshot.png"
+        tmp_dir = ensure_tmp_dir()
+        output_path = os.path.join(tmp_dir, "snapshot.png")
         Image.fromarray(image, mode=mode).save(output_path)
         print(f"Snapshot saved to: {output_path}")
         print(f"Image size: {actual_size}")

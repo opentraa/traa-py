@@ -1,6 +1,6 @@
 # TRAA Python Bindings
 
-Python bindings for the TRAA (Transparent Remote Application Access) library, providing screen capture functionality for Windows, macOS, and Linux.
+Python bindings for the TRAA (To record anything anywhere) library, providing screen capture functionality for Windows, macOS, and Linux.
 
 ## Features
 
@@ -197,15 +197,17 @@ See the `examples` directory for more detailed examples:
   - Enumerating screen sources
   - Selecting a source interactively
   - Capturing and saving screenshots
+![Basic Usage Example](images/basic_usage.png)
+
 
 - `enum_sources.py`: Shows advanced source enumeration with filtering
   - Using different flag combinations
   - Getting thumbnails and icons
   - Displaying detailed source information
   - Filtering sources by type and state
+![Enum sources Example](images/enum_sources.png)
 
 ## Requirements
 
 - Python 3.7+
-- Pillow (PIL) for image handling
 - NumPy for array operations

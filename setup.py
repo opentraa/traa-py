@@ -103,7 +103,6 @@ setup(
     platforms=['Windows', 'Linux', 'macOS'],
     install_requires=[
         'numpy>=1.16.0',
-        'Pillow>=8.0.0',
     ],
     extras_require={
         'dev': [
