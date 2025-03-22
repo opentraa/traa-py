@@ -1,6 +1,6 @@
 # TRAA Python Bindings
 
-Python bindings for the TRAA (To record anything anywhere) library, providing screen capture functionality for Windows, macOS, and Linux.
+Python bindings for the TRAA (To Record Anything Anywhere) library - a high-performance, cross-platform solution for screen capture, window enumeration, and desktop recording. Supports Windows, macOS, and Linux with a clean, Pythonic API.
 
 ## Features
 
