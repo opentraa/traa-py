@@ -84,7 +84,7 @@ package_data_patterns = get_platform_package_data(target_platform)
 
 setup(
     name='traa',
-    version='0.1.4',
+    version='0.1.5',
     description='Python bindings for the TRAA (To Record Anything Anywhere) library - a high-performance, cross-platform solution for screen capture, window enumeration, and desktop recording. Supports Windows, macOS, and Linux with a clean, Pythonic API.',
     long_description=long_description,
     long_description_content_type='text/markdown',
