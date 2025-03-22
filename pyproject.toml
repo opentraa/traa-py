@@ -18,9 +18,11 @@ requires-python = ">=3.10"
 dependencies = [
     "cffi>=1.17.1",
     "numpy>=2.2.3",
-    "pillow>=11.1.0",
 ]
 
 [project.urls]
 Homepage = "https://github.com/opentraa/traa-py"
 Issues = "https://github.com/opentraa/traa-py/issues"
+
+[tool.uv.workspace]
+members = ["examples"]

@@ -167,3 +167,4 @@ libs/
 .python-version
 *.png
 /test_venv
+uv.lock

@@ -19,12 +19,19 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from traa import (
     Size,
     ScreenSourceFlags,
-    ScreenSourceInfo,
     enum_screen_sources,
 )
 
+def ensure_tmp_dir():
+    """Create tmp directory if it doesn't exist"""
+    tmp_dir = os.path.join(os.path.dirname(__file__), 'tmp')
+    os.makedirs(tmp_dir, exist_ok=True)
+    return tmp_dir
+
 def print_sources(sources, title):
     """Print information about screen sources"""
+    tmp_dir = ensure_tmp_dir()
+    
     print(f"\n{title} ({len(sources)} sources):")
     for i, source in enumerate(sources):
         print(f"{i + 1}. {source}")
@@ -40,13 +47,13 @@ def print_sources(sources, title):
         
         # Save thumbnail if available
         if source.thumbnail_data is not None:
-            thumb_path = f"thumb_{title.lower().replace(' ', '_')}_{i + 1}.png"
+            thumb_path = os.path.join(tmp_dir, f"thumb_{title.lower().replace(' ', '_')}_{i + 1}.png")
             Image.fromarray(source.thumbnail_data).save(thumb_path)
             print(f"   Thumbnail saved to: {thumb_path}")
         
         # Save icon if available
         if source.icon_data is not None:
-            icon_path = f"icon_{title.lower().replace(' ', '_')}_{i + 1}.png"
+            icon_path = os.path.join(tmp_dir, f"icon_{title.lower().replace(' ', '_')}_{i + 1}.png")
             Image.fromarray(source.icon_data).save(icon_path)
             print(f"   Icon saved to: {icon_path}")
 
